@@ -55,7 +55,15 @@ def parse_cities(in_file_path):
     return cities
 
 
-def save_results(best_individual, best_individual_history, best_fitness_history, in_file_path, out_path, cities):
+def save_results(best_individual, best_fitness_history, execution_time, in_file_path, out_path, cities):
+    os.makedirs(out_path)
+
+    file_path = os.path.join(out_path, 'result_metrics.txt')
+    file = open(file_path, 'w')
+    file.write('Best Result: ' + str(best_fitness_history[-1]))
+    file.write('Number of Iterations: ' + str(len(best_fitness_history)))
+    file.write('Execution Time: ' + str(execution_time))
+
     file_name = os.path.basename(in_file_path)
     file_extension = pathlib.Path(file_name).suffix
     file_name = file_name.replace(file_extension, '.opt.tour')
@@ -88,11 +96,9 @@ def main():
     args = args_parser.parse_args()
 
     cities = parse_cities(args.in_file_path)
-    best_individual, best_individual_history, best_fitness_history = ga.execute(cities, args.num_individuals,
-                                                                                args.mutation_ratio,
-                                                                                args.selection_type)
-    save_results(best_individual, best_individual_history, best_fitness_history, args.in_file_path, args.out_path,
-                 cities)
+    best_individual, best_fitness_history, execution_time = ga.execute(cities, args.num_individuals,
+                                                                       args.mutation_ratio, args.selection_type)
+    save_results(best_individual, best_fitness_history, execution_time, args.in_file_path, args.out_path, cities)
 
 
 if __name__ == '__main__':
