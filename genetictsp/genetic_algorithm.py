@@ -35,16 +35,15 @@ def __calculate_cities_distance(city_1, city_2, cities):
 def execute(cities, num_individuals, mutation_ratio, selection_type):
     population = __init_population(cities, num_individuals)
 
-    unimproved_iterations_limit = 25
+    unimproved_iterations_limit = 30
     num_descendants = 3
 
     best_fitness = None
     best_fitness_history = []
     best_individual = None
-    best_individual_history = []
     unimproved_iterations = 0
     num_iterations = 0
-    opt_time = 0
+    execution_time = 0
 
     print('########## Optimization ##########\n')
     while unimproved_iterations < unimproved_iterations_limit:
@@ -61,7 +60,6 @@ def execute(cities, num_individuals, mutation_ratio, selection_type):
         if best_fitness is None or best_fitness_candidate < best_fitness:
             best_fitness = best_fitness_candidate
             best_individual = best_individual_candidate
-            best_individual_history.append(best_individual)
             unimproved_iterations = 0
 
             print('New best individual with fitness ' + str(best_fitness))
@@ -75,20 +73,20 @@ def execute(cities, num_individuals, mutation_ratio, selection_type):
         best_fitness_history.append(best_fitness)
 
         iter_time = time.time() - iter_start
-        opt_time += iter_time
-        print('Execution time: ' + str(opt_time) + ' s')
+        execution_time += iter_time
+        print('Execution time: ' + str(execution_time) + ' s')
         print('*********************************\n')
 
     print('##################################')
 
-    return best_individual, best_individual_history, best_fitness_history
+    return best_individual, best_fitness_history, execution_time
 
 
 def __reproduction(population, num_individuals, num_descendants, mutation_ratio, cities):
     new_population = []
 
     factor = sum([__get_fitness(i) for i in population])
-    weights = [__get_fitness(i) / factor for i in population]
+    weights = [1 - (__get_fitness(i) / factor) for i in population]
 
     while len(new_population) < num_individuals * num_descendants:
         parents = __choices_no_replacement(population, weights, 2)
