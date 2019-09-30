@@ -22,20 +22,22 @@ def build_args_parser():
     parser = ArgumentParser(description='A genetic algorithm project to find a good solution the travelling salesman'
                                         'problem',
                             usage=usage)
-    parser.add_argument('-i', '--in', dest='in_file_path', required=True,
+    parser.add_argument('--in', dest='in_file_path', required=True,
                         help='Path to the file with the cities map description following the TSPLIB'
                              '(http://elib.zib.de/pub/mp-testdata/tsp/tsplib/tsp/)')
-    parser.add_argument('-o', '--out', dest='out_path', default='results',
+    parser.add_argument('--out', dest='out_path', default='results',
                         help='Path to the directory where all the generated data will be saved')
-    parser.add_argument('-n', '--numind', dest='num_individuals', type=int, default=300,
+    parser.add_argument('-i', '--individuals', dest='num_individuals', type=int, default=1000,
                         help='Number of individuals in each population during the execution of the algorithm')
     parser.add_argument('-m', '--mutation', dest='mutation_ratio', type=mutation_range, default=0.02,
                         help='Initial mutation ratio for the genetic algorithm. Should be between 0 and 1')
     parser.add_argument('-s', '--selection', dest='selection_type', type=int, default=3, choices=[1, 2, 3],
                         help='Type of selection to be used by the genetic algorithm. Available types:\n       '
-                             '1 - Roulette Wheel Selection\n       '
-                             '2 - Round Robin\n       '
-                             '3 - Elitism\n       ')
+                             '1 - Round Robin\n       '
+                             '2 - Elitism\n       '
+                             '3 - Roulette Wheel Selection\n       ')
+    parser.add_argument('-d', '--descendants', dest='num_descendants', type=int, default=5,
+                        help='Number of descendants that will be generated during the reproduction')
 
     return parser
 
@@ -56,13 +58,14 @@ def parse_cities(in_file_path):
 
 
 def save_results(best_individual, best_fitness_history, execution_time, in_file_path, out_path, cities):
-    os.makedirs(out_path)
+    if not os.path.exists(out_path):
+        os.makedirs(out_path)
 
     file_path = os.path.join(out_path, 'result_metrics.txt')
     file = open(file_path, 'w')
-    file.write('Best Result: ' + str(best_fitness_history[-1]))
-    file.write('Number of Iterations: ' + str(len(best_fitness_history)))
-    file.write('Execution Time: ' + str(execution_time))
+    file.write('Best Result: ' + str(best_fitness_history[-1]) + '\n')
+    file.write('Number of Iterations: ' + str(len(best_fitness_history)) + '\n')
+    file.write('Execution Time: ' + str(execution_time) + '\n')
 
     file_name = os.path.basename(in_file_path)
     file_extension = pathlib.Path(file_name).suffix
@@ -97,7 +100,8 @@ def main():
 
     cities = parse_cities(args.in_file_path)
     best_individual, best_fitness_history, execution_time = ga.execute(cities, args.num_individuals,
-                                                                       args.mutation_ratio, args.selection_type)
+                                                                       args.mutation_ratio, args.selection_type,
+                                                                       args.num_descendants)
     save_results(best_individual, best_fitness_history, execution_time, args.in_file_path, args.out_path, cities)
 
 

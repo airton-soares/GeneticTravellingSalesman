@@ -1,6 +1,7 @@
 from random import shuffle, choices, choice, sample
 import math
 import time
+import heapq
 
 
 def __init_population(cities, num_individuals):
@@ -32,11 +33,10 @@ def __calculate_cities_distance(city_1, city_2, cities):
     return __calculate_distance(float(orig_lat), float(dest_lat), float(orig_long), float(dest_long))
 
 
-def execute(cities, num_individuals, mutation_ratio, selection_type):
+def execute(cities, num_individuals, mutation_ratio, selection_type, num_descendants):
     population = __init_population(cities, num_individuals)
 
-    unimproved_iterations_limit = 30
-    num_descendants = 3
+    unimproved_iterations_limit = 20
 
     best_fitness = None
     best_fitness_history = []
@@ -54,7 +54,7 @@ def execute(cities, num_individuals, mutation_ratio, selection_type):
 
         population = __reproduction(population, num_individuals, num_descendants, mutation_ratio, cities)
         population = __selection(population, selection_type, num_individuals, num_descendants)
-        best_individual_candidate = __get_best_individual(population)
+        best_individual_candidate = __get_best_individuals(population, 1)[0]
         best_fitness_candidate = __get_fitness(best_individual_candidate)
 
         if best_fitness is None or best_fitness_candidate < best_fitness:
@@ -65,6 +65,7 @@ def execute(cities, num_individuals, mutation_ratio, selection_type):
             print('New best individual with fitness ' + str(best_fitness))
         else:
             unimproved_iterations += 1
+
             print('No improvement in this iteration. ' +
                   'Number of unimproved iterations: ' +
                   str(unimproved_iterations) + '/' + str(unimproved_iterations_limit)
@@ -85,8 +86,7 @@ def execute(cities, num_individuals, mutation_ratio, selection_type):
 def __reproduction(population, num_individuals, num_descendants, mutation_ratio, cities):
     new_population = []
 
-    factor = sum([__get_fitness(i) for i in population])
-    weights = [1 - (__get_fitness(i) / factor) for i in population]
+    weights = __get_population_weights(population)
 
     while len(new_population) < num_individuals * num_descendants:
         parents = __choices_no_replacement(population, weights, 2)
@@ -208,20 +208,13 @@ def __shift_cities(individual, city_1, city_2, cities):
 
 def __selection(population, selection_type, num_individuals, num_descendants):
     if selection_type == 1:
-        return __roulette_selection(population, num_individuals)
-    elif selection_type == 2:
         return __round_selection(population, num_individuals, num_descendants)
-    elif selection_type == 3:
+    elif selection_type == 2:
         return __elitist_selection(population, num_individuals)
+    elif selection_type == 3:
+        return __roulette_selection(population, num_individuals)
     else:
         return population[0:num_individuals]
-
-
-def __roulette_selection(population, num_individuals):
-    factor = sum([__get_fitness(i) for i in population])
-    weights = [__get_fitness(i) / factor for i in population]
-
-    return __choices_no_replacement(population, weights, num_individuals)
 
 
 def __round_selection(population, num_individuals, num_descendants):
@@ -231,32 +224,28 @@ def __round_selection(population, num_individuals, num_descendants):
     new_population = []
     for i in range(0, num_individuals):
         population_slice = population[i * round_size:round_size * (i + 1)]
-        new_population.append(__get_best_individual(population_slice))
+        new_population.append(__get_best_individuals(population_slice, 1)[0])
 
     return new_population
 
 
 def __elitist_selection(population, num_individuals):
-    new_population = []
-
-    for i in range(num_individuals):
-        best_individual = __get_best_individual(population)
-        new_population.append(best_individual.copy())
-        population.remove(best_individual)
-
+    new_population = __get_best_individuals(population, num_individuals)
     return new_population
 
 
-def __get_best_individual(population):
-    best_individual = None
-    best_fitness = None
-    for individual in population:
-        fitness = __get_fitness(individual)
-        if best_fitness is None or fitness < best_fitness:
-            best_individual = individual
-            best_fitness = fitness
+def __roulette_selection(population, num_individuals):
+    weights = __get_population_weights(population)
+    return __choices_no_replacement(population, weights, num_individuals)
 
-    return best_individual
+
+def __get_best_individuals(population, num_individuals):
+    all_fitness = [__get_fitness(individual) for individual in population]
+    best_fitness = heapq.nsmallest(num_individuals, all_fitness)
+    best_fitness_indices = [all_fitness.index(curr_fitness) for curr_fitness in best_fitness]
+    best_individuals = [population[i].copy() for i in best_fitness_indices]
+
+    return best_individuals
 
 
 def __get_fitness(individual):
@@ -265,6 +254,13 @@ def __get_fitness(individual):
 
 def __calculate_distance(orig_lat, dest_lat, orig_long, dest_long):
     return math.sqrt((orig_lat - dest_lat) ** 2 + (orig_long - dest_long) ** 2)
+
+
+def __get_population_weights(population):
+    all_fitness = [__get_fitness(i) for i in population]
+    worst_fitness = max(all_fitness)
+    weights = [1 - (curr_fitness / worst_fitness) for curr_fitness in all_fitness]
+    return weights
 
 
 def __choices_no_replacement(l, weights, k):
